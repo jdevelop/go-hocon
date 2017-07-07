@@ -27,13 +27,10 @@ array
 value
    : STRING {fmt.Println($STRING.GetText())}
    | REFERENCE {fmt.Println($REFERENCE.GetText())}
-   | RAWSTRING {fmt.Println($RAWSTRING.GetText())}
+   | rawstring
    | NUMBER {fmt.Println($NUMBER.GetText())}
    | obj
    | array
-   | 'true'
-   | 'false'
-   | 'null'
    ;
 
 COMMENT
@@ -45,8 +42,8 @@ STRING
    | '\'' (ESC | ~ ['\\])* '\''
    ;
 
-RAWSTRING
-   : (ESC | ALPHANUM)+
+rawstring
+   : (ALPHANUM)+
    ;
 
 KEY
@@ -66,8 +63,8 @@ fragment UNICODE
    : 'u' HEX HEX HEX HEX
    ;
 
-fragment ALPHANUM
-   : [a-zA-Z]
+ALPHANUM
+   : ('a'..'z') | ('A' .. 'Z')
    ;
 
 fragment HEX
