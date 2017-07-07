@@ -4,37 +4,13 @@
 // Derived from http://json.org
 grammar HOCON;
 
-hocon
-   : value
-   | pair
-   ;
-
-obj
-   : object_begin pair (','? pair)* object_end
-   | object_begin object_end
-   ;
-
-pair
-   : STRING KV? value {fmt.Println("pairstr",$STRING.GetText())}
-   | KEY KV? value {fmt.Println("pairkey",$KEY.GetText())}
-   ;
-
-array
-   : array_begin value (',' value)* array_end
-   | array_begin array_end
-   ;
-
-value
-   : STRING {fmt.Println($STRING.GetText())}
-   | REFERENCE {fmt.Println($REFERENCE.GetText())}
-   | rawstring
-   | NUMBER {fmt.Println($NUMBER.GetText())}
-   | obj
-   | array
-   ;
 
 COMMENT
    : '#' ~( '\r' | '\n' )* -> skip
+   ;
+
+NUMBER
+   : '-'? INT '.' [0-9] + EXP? | '-'? INT EXP | '-'? INT
    ;
 
 STRING
@@ -42,16 +18,18 @@ STRING
    | '\'' (ESC | ~ ['\\])* '\''
    ;
 
-rawstring
-   : (ALPHANUM)+
-   ;
-
-KEY
+RAWSTRING
    : ( '.' | ALPHANUM | '-')+
    ;
 
 REFERENCE
    : '${' (ALPHANUM|'.')+ '}'
+   ;
+
+KV : [=:] ;
+
+WS
+   : [ \t\n\r] + -> skip
    ;
 
 fragment ESC
@@ -63,16 +41,55 @@ fragment UNICODE
    : 'u' HEX HEX HEX HEX
    ;
 
-ALPHANUM
-   : ('a'..'z') | ('A' .. 'Z')
+fragment ALPHANUM
+   : ('0' .. '9') | ('a'..'z') | ('A' .. 'Z')
    ;
 
 fragment HEX
    : [0-9a-fA-F]
    ;
 
-KV
-   : [=:]
+fragment INT
+   : '0' | [1-9] [0-9]*
+   ;
+
+// no leading zeros
+
+fragment EXP
+   : [Ee] [+\-]? INT
+   ;
+
+// \- since - means "range" inside [...]
+
+//======================================================================================
+
+hocon
+   : value
+   | property
+   ;
+
+obj
+   : object_begin property (','? property)* object_end
+   | object_begin object_end
+   ;
+
+property
+   : STRING KV? value {fmt.Println("string",$STRING.GetText())}
+   | RAWSTRING KV? value {fmt.Println("rawstring",$RAWSTRING.GetText())}
+   ;
+
+array
+   : array_begin value (',' value)* array_end
+   | array_begin array_end
+   ;
+
+value
+   : STRING {fmt.Println($STRING.GetText())}
+   | REFERENCE {fmt.Println($REFERENCE.GetText())}
+   | NUMBER {fmt.Println($NUMBER.GetText())}
+   | obj
+   | array
+   | RAWSTRING
    ;
 
 array_begin
@@ -89,24 +106,4 @@ object_begin
 
 object_end
    : '}' { fmt.Println("} OBJ") }
-   ;
-
-NUMBER
-   : '-'? INT '.' [0-9] + EXP? | '-'? INT EXP | '-'? INT
-   ;
-
-fragment INT
-   : '0' | [1-9] [0-9]*
-   ;
-
-// no leading zeros
-
-fragment EXP
-   : [Ee] [+\-]? INT
-   ;
-
-// \- since - means "range" inside [...]
-
-WS
-   : [ \t\n\r] + -> skip
    ;
