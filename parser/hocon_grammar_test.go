@@ -30,3 +30,25 @@ func TestSimpleGrammar(t *testing.T) {
 	}
 
 }
+
+type T struct {
+	*BaseHOCONListener
+}
+
+func TestSimpleListener(t *testing.T) {
+	is, _ := antlr.NewFileStream("../test/simple1.conf")
+
+	lex := NewHOCONLexer(is)
+	p := NewHOCONParser(antlr.NewCommonTokenStream(lex, 0))
+	p.BuildParseTrees = true
+
+	e := Err{t: t, path: "../test/simple1.conf"}
+
+	p.AddErrorListener(&e)
+
+	l := T{}
+
+	p.AddParseListener(&l)
+	p.Hocon()
+
+}

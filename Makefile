@@ -8,7 +8,7 @@ deps: antlr/antlr-4.7-complete.jar
 	go get -u github.com/antlr/antlr4/runtime/Go/antlr/...
 
 gen:	deps
-	java -jar antlr/antlr-4.7-complete.jar -o . -Dlanguage=Go parser/HOCON.g4
+	java -jar antlr/antlr-4.7-complete.jar -o . -listener -Dlanguage=Go parser/HOCON.g4
 
 build:	gen
 	go build ./...

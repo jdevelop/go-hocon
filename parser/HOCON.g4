@@ -23,10 +23,11 @@ RAWSTRING
    ;
 
 REFERENCE
-   : '${' (ALPHANUM|'.')+ '}'
+   : '${' (RAWSTRING)+ '}'
    ;
 
-KV : [=:] ;
+KV : [=:] -> skip
+   ;
 
 WS
    : [ \t\n\r] + -> skip
@@ -65,7 +66,7 @@ fragment EXP
 
 hocon
    : value
-   | property
+   | property*
    ;
 
 obj
@@ -74,8 +75,11 @@ obj
    ;
 
 property
-   : STRING KV? value {fmt.Println("string",$STRING.GetText())}
-   | RAWSTRING KV? value {fmt.Println("rawstring",$RAWSTRING.GetText())}
+   : key KV? value
+   ;
+
+key
+   : NAME=(STRING | RAWSTRING)
    ;
 
 array
@@ -84,26 +88,26 @@ array
    ;
 
 value
-   : STRING {fmt.Println($STRING.GetText())}
-   | REFERENCE {fmt.Println($REFERENCE.GetText())}
-   | NUMBER {fmt.Println($NUMBER.GetText())}
-   | obj
-   | array
-   | RAWSTRING
+   : STRING         # l_string
+   | REFERENCE      # l_reference
+   | NUMBER         # l_number
+   | obj            # l_object
+   | array          # l_array
+   | RAWSTRING      # l_rawstring
    ;
 
 array_begin
-   : '[' { fmt.Println("BEGIN [") }
+   : '['
    ;
 
 array_end
-   : ']' { fmt.Println("] END") }
+   : ']'
    ;
 
 object_begin
-   : '{' { fmt.Println("OBJ {") }
+   : '{'
    ;
 
 object_end
-   : '}' { fmt.Println("} OBJ") }
+   : '}'
    ;
