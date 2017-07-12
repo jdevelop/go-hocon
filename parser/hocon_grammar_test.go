@@ -3,6 +3,7 @@ package parser
 import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"testing"
+	"fmt"
 )
 
 type Err struct {
@@ -33,6 +34,18 @@ func TestSimpleGrammar(t *testing.T) {
 
 type T struct {
 	*BaseHOCONListener
+}
+
+func (r *T) ExitObject_data(ctx *Object_dataContext) {
+	fmt.Println(ctx.Key().GetText(), ctx.Obj().GetText())
+}
+
+func (r *T) EnterObject_data(ctx *Object_dataContext) {
+	fmt.Println("ENTER")
+}
+
+func (r *T) ExitKey(ctx *KeyContext) {
+	fmt.Println("KEY", ctx.NAME.GetText())
 }
 
 func TestSimpleListener(t *testing.T) {

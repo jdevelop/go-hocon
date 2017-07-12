@@ -7,27 +7,42 @@ import (
 	"strings"
 )
 
-func TestSimpleListener(t *testing.T) {
+func TestReferenceListener(t *testing.T) {
 	is, _ := antlr.NewFileStream("test/reference.conf")
-	res, _ := ParseHocon(is)
-	var f func(int, *NamedValue)
+	_, res := ParseHocon(is)
+	dumpConfig(1, res.root)
+}
 
-	f = func(level int, n *NamedValue) {
-		if n == nil {
-			return
-		}
-		fmt.Print(strings.Repeat("+", level), "Node ", n.name)
-		switch n.value.(type) {
-		case []*NamedValue:
-			fmt.Println()
-			nvp, _ := n.value.([]*NamedValue)
-			for _, v := range nvp {
-				f(level+2, v)
-			}
-		default:
-			fmt.Println("=", n.value)
+func TestSimpleListener(t *testing.T) {
+	is, _ := antlr.NewFileStream("test/simple1.conf")
+	_, res := ParseHocon(is)
+	dumpConfig(1, res.root)
+}
+
+func dumpConfig(level int, conf *ConfigObject) {
+	prefix := strings.Repeat("+", level)
+	for k, v := range *conf.content {
+		switch v.Type {
+		case StringType:
+			fmt.Println(prefix, k, "=", v.RefValue.(string))
+		case ObjectType:
+			fmt.Println(prefix, k)
+			dumpConfig(level+1, v.RefValue.(*ConfigObject))
 		}
 	}
+}
 
-	f(0, &res.NamedValue)
+func TestKeyTreeBuild(t *testing.T) {
+	config := NewConfigObject(nil)
+
+	setObjectKey("test1", config)
+	setObjectKey("test2", config)
+	setObjectKey("test1.passed1", config)
+	p3 := setObjectKey("test2.passed2.passed3", config)
+	setObjectKey("nested1", p3)
+	setObjectKey("nested2", p3)
+	setObjectKey("nested3", p3)
+
+	dumpConfig(1, config)
+
 }

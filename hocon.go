@@ -3,110 +3,108 @@ package go_hocon
 import (
 	"github.com/jdevelop/go-hocon/parser"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"strings"
 )
 
-type NamedValue struct {
-	name  string
-	value interface{}
+type ValueType int
+
+const (
+	StringType ValueType = iota
+	IntType
+	ObjectType
+	ArrayType
+)
+
+type Value struct {
+	Type     ValueType
+	RefValue interface{}
 }
+
+func MakeStringValue(src string) *Value {
+	return &Value{
+		Type:     StringType,
+		RefValue: src,
+	}
+}
+
+type Content map[string]*Value
+
+type ConfigObject struct {
+	parent  *ConfigObject
+	content *Content
+}
+
+type updateKey func(string)
+
+func noop(string) {}
 
 type Hocon struct {
-	NamedValue
-	parent          *Hocon
-	currentChildIdx int
-}
-
-type hoconParser struct {
 	*parser.BaseHOCONListener
-	current *Hocon
+	root    *ConfigObject
+	updater updateKey
 }
 
-func NewHocon() *Hocon {
-	h := Hocon{
-		currentChildIdx: 0,
-		parent:          nil,
-	}
-	h.value = make([]*NamedValue, 10)
-	return &h
+func (r *Hocon) ExitObject_data(ctx *parser.Object_dataContext) {
+	r.root = r.root.parent
+	r.updater = noop
 }
 
-func (h *Hocon) values() []*NamedValue {
-	if res, err := h.value.([]*NamedValue); err {
-		return res
-	} else {
-		return nil
+func (r *Hocon) EnterObject_data(ctx *parser.Object_dataContext) {
+	r.updater = func(path string) {
+		r.root = setObjectKey(path, r.root)
+		r.updater = noop
 	}
 }
 
-func (h *Hocon) ensureSpace() {
-	if h.currentChildIdx > len(h.values())-2 {
-		newVals := make([]*NamedValue, len(h.values())*2)
-		copy(newVals, h.values())
-		h.value = newVals
+func (r *Hocon) ExitKey(ctx *parser.KeyContext) {
+	r.updater(ctx.NAME.GetText())
+}
+
+func (r *Hocon) ExitString_data(ctx *parser.String_dataContext) {
+	(*r.root.content)[ctx.Key().GetText()] = MakeStringValue(ctx.STRING().GetText())
+}
+
+func NewConfigObject(parent *ConfigObject) *ConfigObject {
+	m := make(Content)
+	co := ConfigObject{
+		parent:  parent,
+		content: &m,
 	}
+	return &co
 }
 
-func (h *Hocon) addNamedValueChild(name string) {
-	h.ensureSpace()
-	h.values()[h.currentChildIdx] = &NamedValue{
-		name:  name,
-		value: nil,
+func setObjectKey(path string, obj *ConfigObject) *ConfigObject {
+	keys := strings.Split(path, ".")
+	oldRoot := obj
+	for _, key := range keys {
+		if v, exists := (*obj.content)[key]; exists {
+			switch v.Type {
+			case ObjectType:
+				obj = v.RefValue.(*ConfigObject)
+			default:
+				panic("Wrong path")
+			}
+			continue
+		}
+
+		newObject := NewConfigObject(obj)
+		(*obj.content)[key] = &Value{
+			Type:     ObjectType,
+			RefValue: newObject,
+		}
+		obj = newObject
 	}
+	obj.parent = oldRoot
+	return obj
 }
 
-func (h *Hocon) currentProperty() *NamedValue {
-	return h.values()[h.currentChildIdx]
-}
-
-func (p *hoconParser) ExitKey(ctx *parser.KeyContext) {
-	p.current.addNamedValueChild(ctx.NAME.GetText())
-}
-
-func (p *hoconParser) EnterObj(ctx *parser.ObjContext) {
-	h := NewHocon()
-	h.parent = p.current
-	p.current = h
-}
-
-func (p *hoconParser) ExitObj(ctx *parser.ObjContext) {
-	parent := p.current.parent
-	p.current.name = parent.values()[parent.currentChildIdx].name
-	parent.values()[parent.currentChildIdx] = &p.current.NamedValue
-	parent.currentChildIdx++
-	p.current = p.current.parent
-}
-
-func (p *hoconParser) ExitL_string(ctx *parser.L_stringContext) {
-	p.current.currentProperty().value = ctx.STRING().GetText()
-	p.current.currentChildIdx++
-}
-
-func (p *hoconParser) ExitL_rawstring(ctx *parser.L_rawstringContext) {
-	p.current.currentProperty().value = ctx.RAWSTRING().GetText()
-	p.current.currentChildIdx++
-}
-
-func (p *hoconParser) ExitL_number(ctx *parser.L_numberContext) {
-	p.current.currentProperty().value = ctx.NUMBER().GetText()
-	p.current.currentChildIdx++
-}
-
-func (p *hoconParser) ExitL_reference(ctx *parser.L_referenceContext) {
-	p.current.currentProperty().value = ctx.REFERENCE().GetText()
-	p.current.currentChildIdx++
-}
-
-func ParseHocon(is antlr.CharStream) (*Hocon, error) {
-	hocon := NewHocon()
-	hocon.name = "root"
-	l := hoconParser{current: hocon}
-
-	lex := parser.NewHOCONLexer(is)
-	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(lex, 0))
-	p.BuildParseTrees = true
-	p.AddParseListener(&l)
-
+func ParseHocon(stream antlr.CharStream) (err error, h *Hocon) {
+	h = new(Hocon)
+	h.updater = noop
+	h.root = NewConfigObject(nil)
+	ts := parser.NewHOCONLexer(stream)
+	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
+	p.AddParseListener(h)
 	p.Hocon()
-
-	return hocon, nil
+	return err, h
 }

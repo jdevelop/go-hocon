@@ -75,7 +75,36 @@ obj
    ;
 
 property
-   : key KV? value
+   : object_data
+   | array_data
+   | string_data
+   | reference_data
+   | number_data
+   | rawstring_data
+   ;
+
+object_data
+   : key KV? obj
+   ;
+
+array_data
+   : key KV? array
+   ;
+
+string_data
+   : key KV? STRING
+   ;
+
+reference_data
+   : key KV? REFERENCE
+   ;
+
+number_data
+   : key KV? NUMBER
+   ;
+
+rawstring_data
+   : key KV? RAWSTRING
    ;
 
 key
@@ -88,12 +117,12 @@ array
    ;
 
 value
-   : STRING         # l_string
-   | REFERENCE      # l_reference
-   | NUMBER         # l_number
-   | obj            # l_object
-   | array          # l_array
-   | RAWSTRING      # l_rawstring
+   : STRING
+   | REFERENCE
+   | NUMBER
+   | obj
+   | array
+   | RAWSTRING
    ;
 
 array_begin
