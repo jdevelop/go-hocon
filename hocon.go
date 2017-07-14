@@ -70,7 +70,11 @@ func (r *hocon) ExitKey(ctx *parser.KeyContext) {
 }
 
 func (r *hocon) ExitString_data(ctx *parser.String_dataContext) {
-	(*r.root.content)[ctx.Key().GetText()] = MakeStringValue(ctx.String_value().GetText())
+	sd := ctx.String_value().GetText()
+	if sd[0] == '"' || sd[0] == '\'' {
+		sd = sd[1:len(sd)-1]
+	}
+	(*r.root.content)[ctx.Key().GetText()] = MakeStringValue(sd)
 }
 
 func (r *hocon) ExitNumber_data(ctx *parser.Number_dataContext) {
@@ -121,4 +125,32 @@ func ParseHocon(stream antlr.CharStream) (err error, o *ConfigObject) {
 	p.Hocon()
 	o = h.root
 	return err, o
+}
+
+func traversePath(o *ConfigObject, path string) (*ConfigObject, string) {
+	obj := o
+	paths := strings.Split(path, ".")
+	for _, p := range paths[:len(paths)-1] {
+		if d := (*obj.content)[p]; d == nil {
+			return nil, ""
+		} else {
+			switch d.Type {
+			case ObjectType:
+				obj = d.RefValue.(*ConfigObject)
+			default:
+				return nil, ""
+			}
+		}
+	}
+	return obj, paths[len(paths)-1]
+}
+
+func (o *ConfigObject) getString(path string) string {
+	obj, key := traversePath(o, path)
+	return (*obj.content)[key].RefValue.(string)
+}
+
+func (o *ConfigObject) getInt(path string) int {
+	obj, key := traversePath(o, path)
+	return (*obj.content)[key].RefValue.(int)
 }
