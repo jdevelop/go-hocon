@@ -154,3 +154,8 @@ func (o *ConfigObject) getInt(path string) int {
 	obj, key := traversePath(o, path)
 	return (*obj.content)[key].RefValue.(int)
 }
+
+func (o *ConfigObject) getObject(path string) *ConfigObject {
+	obj, key := traversePath(o, path)
+	return (*obj.content)[key].RefValue.(*ConfigObject)
+}

@@ -17,10 +17,12 @@ func TestReferenceListener(t *testing.T) {
 func TestSimpleListener(t *testing.T) {
 	is, _ := antlr.NewFileStream("test/simple1.conf")
 	_, res := ParseHocon(is)
-	dumpConfig(1, res)
 	assert.Equal(t, "on", res.getString("akka.persistence.view.auto-update"))
 	assert.Equal(t, "off", res.getString("akka.persistence.view.auto-update-replay-max"))
 	assert.Equal(t, -1, res.getInt("akka.persistence.view.auto-update-replay-min"))
+	obj := res.getObject("akka.persistence.snapshot-store.proxy")
+	assert.Equal(t, "10s", obj.getString("init-timeout"))
+	dumpConfig(1, res)
 }
 
 func dumpConfig(level int, conf *ConfigObject) {
