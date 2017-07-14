@@ -1,16 +1,16 @@
-package go_hocon
+package hocon
 
 import (
-	"github.com/jdevelop/go-hocon/parser"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"strings"
+	"github.com/jdevelop/go-hocon/parser"
 	"strconv"
+	"strings"
 )
 
 type ValueType int
 
 const (
-	StringType  ValueType = iota
+	StringType ValueType = iota
 	NumericType
 	ObjectType
 	ArrayType
@@ -72,7 +72,7 @@ func (r *hocon) ExitKey(ctx *parser.KeyContext) {
 func (r *hocon) ExitString_data(ctx *parser.String_dataContext) {
 	sd := ctx.String_value().GetText()
 	if sd[0] == '"' || sd[0] == '\'' {
-		sd = sd[1:len(sd)-1]
+		sd = sd[1 : len(sd)-1]
 	}
 	(*r.root.content)[ctx.Key().GetText()] = MakeStringValue(sd)
 }
@@ -115,7 +115,7 @@ func setObjectKey(path string, obj *ConfigObject) *ConfigObject {
 	return obj
 }
 
-func ParseHocon(stream antlr.CharStream) (err error, o *ConfigObject) {
+func ParseHocon(stream antlr.CharStream) (o *ConfigObject, err error) {
 	h := new(hocon)
 	h.updater = noop
 	h.root = NewConfigObject(nil)
@@ -124,7 +124,33 @@ func ParseHocon(stream antlr.CharStream) (err error, o *ConfigObject) {
 	p.AddParseListener(h)
 	p.Hocon()
 	o = h.root
-	return err, o
+	return o, err
+}
+
+func ParseHoconString(data string) (o *ConfigObject, err error) {
+	h := new(hocon)
+	h.updater = noop
+	h.root = NewConfigObject(nil)
+	ts := parser.NewHOCONLexer(antlr.NewInputStream(data))
+	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
+	p.AddParseListener(h)
+	p.Hocon()
+	o = h.root
+	return o, err
+}
+
+func ParseHoconFile(filename string) (o *ConfigObject, err error) {
+	h := new(hocon)
+	h.updater = noop
+	h.root = NewConfigObject(nil)
+	if fs, err := antlr.NewFileStream(filename); err == nil {
+		ts := parser.NewHOCONLexer(fs)
+		p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
+		p.AddParseListener(h)
+		p.Hocon()
+		o = h.root
+	}
+	return o, err
 }
 
 func traversePath(o *ConfigObject, path string) (*ConfigObject, string) {
@@ -145,17 +171,29 @@ func traversePath(o *ConfigObject, path string) (*ConfigObject, string) {
 	return obj, paths[len(paths)-1]
 }
 
-func (o *ConfigObject) getString(path string) string {
-	obj, key := traversePath(o, path)
-	return (*obj.content)[key].RefValue.(string)
+func (o *ConfigObject) getString(path string) (res string) {
+	if obj, key := traversePath(o, path); obj != nil {
+		if v, ok := (*obj.content)[key]; ok {
+			res = v.RefValue.(string)
+		}
+	}
+	return res
 }
 
-func (o *ConfigObject) getInt(path string) int {
-	obj, key := traversePath(o, path)
-	return (*obj.content)[key].RefValue.(int)
+func (o *ConfigObject) getInt(path string) (res int) {
+	if obj, key := traversePath(o, path); obj != nil {
+		if v, ok := (*obj.content)[key]; ok {
+			res = v.RefValue.(int)
+		}
+	}
+	return res
 }
 
-func (o *ConfigObject) getObject(path string) *ConfigObject {
-	obj, key := traversePath(o, path)
-	return (*obj.content)[key].RefValue.(*ConfigObject)
+func (o *ConfigObject) getObject(path string) (res *ConfigObject) {
+	if obj, key := traversePath(o, path); obj != nil {
+		if v, ok := (*obj.content)[key]; ok {
+			res = v.RefValue.(*ConfigObject)
+		}
+	}
+	return res
 }

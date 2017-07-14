@@ -1,22 +1,19 @@
-package go_hocon
+package hocon
 
 import (
-	"testing"
-	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"fmt"
-	"strings"
 	"github.com/stretchr/testify/assert"
+	"strings"
+	"testing"
 )
 
 func TestReferenceListener(t *testing.T) {
-	is, _ := antlr.NewFileStream("test/reference.conf")
-	_, res := ParseHocon(is)
+	res, _ := ParseHoconFile("test/reference.conf")
 	dumpConfig(1, res)
 }
 
 func TestSimpleListener(t *testing.T) {
-	is, _ := antlr.NewFileStream("test/simple1.conf")
-	_, res := ParseHocon(is)
+	res, _ := ParseHoconFile("test/simple1.conf")
 	assert.Equal(t, "on", res.getString("akka.persistence.view.auto-update"))
 	assert.Equal(t, "off", res.getString("akka.persistence.view.auto-update-replay-max"))
 	assert.Equal(t, -1, res.getInt("akka.persistence.view.auto-update-replay-min"))
@@ -53,5 +50,8 @@ func TestKeyTreeBuild(t *testing.T) {
 	setObjectKey("nested3", p3)
 
 	dumpConfig(1, config)
+
+	assert.NotNil(t, config.getObject("test2.passed2").getObject("passed3"))
+	assert.Nil(t, config.getObject("test2.passed2").getObject("passed5"))
 
 }
