@@ -36,16 +36,16 @@ type T struct {
 	*BaseHOCONListener
 }
 
-func (r *T) ExitObject_data(ctx *Object_dataContext) {
-	fmt.Println(ctx.Key().GetText(), ctx.Obj().GetText())
-}
-
 func (r *T) EnterObject_data(ctx *Object_dataContext) {
 	fmt.Println("ENTER")
 }
 
+func (r *T) ExitObject_data(ctx *Object_dataContext) {
+	fmt.Println("EXIT")
+}
+
 func (r *T) ExitKey(ctx *KeyContext) {
-	fmt.Println("KEY", ctx.NAME.GetText())
+	fmt.Println("KEY", ctx.Path().GetText())
 }
 
 func TestSimpleListener(t *testing.T) {

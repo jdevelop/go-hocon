@@ -18,15 +18,15 @@ STRING
    | '\'' (ESC | ~ ['\\])* '\''
    ;
 
-RAWSTRING
-   : ( '.' | ALPHANUM | '-')+
+PATHELEMENT
+   : (ALPHANUM|'-')+
    ;
 
 REFERENCE
-   : '${' (RAWSTRING)+ '}'
+   : '${' PATHELEMENT ('.' PATHELEMENT)* '}'
    ;
 
-KV : [=:] -> skip
+KV : [=:]
    ;
 
 WS
@@ -65,7 +65,7 @@ fragment EXP
 //======================================================================================
 
 hocon
-   : value
+   : value*
    | property*
    ;
 
@@ -80,7 +80,6 @@ property
    | string_data
    | reference_data
    | number_data
-   | rawstring_data
    ;
 
 object_data
@@ -88,27 +87,37 @@ object_data
    ;
 
 array_data
-   : key KV? array
+   : key KV array
+   ;
+
+rawstring
+   : (PATHELEMENT|'-')+
+   ;
+
+string_value
+   : STRING
+   | rawstring
    ;
 
 string_data
-   : key KV? STRING
+   : key KV string_value
    ;
 
 reference_data
-   : key KV? REFERENCE
+   : key KV REFERENCE
    ;
 
 number_data
-   : key KV? NUMBER
+   : key KV NUMBER
    ;
 
-rawstring_data
-   : key KV? RAWSTRING
+path
+   : PATHELEMENT ('.' PATHELEMENT)*
    ;
 
 key
-   : NAME=(STRING | RAWSTRING)
+   : path
+   | STRING
    ;
 
 array
@@ -122,7 +131,6 @@ value
    | NUMBER
    | obj
    | array
-   | RAWSTRING
    ;
 
 array_begin

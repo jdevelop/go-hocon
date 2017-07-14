@@ -4,13 +4,14 @@ import (
 	"github.com/jdevelop/go-hocon/parser"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"strings"
+	"strconv"
 )
 
 type ValueType int
 
 const (
-	StringType ValueType = iota
-	IntType
+	StringType  ValueType = iota
+	NumericType
 	ObjectType
 	ArrayType
 )
@@ -27,6 +28,14 @@ func MakeStringValue(src string) *Value {
 	}
 }
 
+func MakeNumericValue(src string) *Value {
+	val, _ := strconv.Atoi(src)
+	return &Value{
+		Type:     NumericType,
+		RefValue: val,
+	}
+}
+
 type Content map[string]*Value
 
 type ConfigObject struct {
@@ -38,30 +47,34 @@ type updateKey func(string)
 
 func noop(string) {}
 
-type Hocon struct {
+type hocon struct {
 	*parser.BaseHOCONListener
 	root    *ConfigObject
 	updater updateKey
 }
 
-func (r *Hocon) ExitObject_data(ctx *parser.Object_dataContext) {
+func (r *hocon) ExitObject_data(ctx *parser.Object_dataContext) {
 	r.root = r.root.parent
 	r.updater = noop
 }
 
-func (r *Hocon) EnterObject_data(ctx *parser.Object_dataContext) {
+func (r *hocon) EnterObject_data(ctx *parser.Object_dataContext) {
 	r.updater = func(path string) {
 		r.root = setObjectKey(path, r.root)
 		r.updater = noop
 	}
 }
 
-func (r *Hocon) ExitKey(ctx *parser.KeyContext) {
-	r.updater(ctx.NAME.GetText())
+func (r *hocon) ExitKey(ctx *parser.KeyContext) {
+	r.updater(ctx.GetText())
 }
 
-func (r *Hocon) ExitString_data(ctx *parser.String_dataContext) {
-	(*r.root.content)[ctx.Key().GetText()] = MakeStringValue(ctx.STRING().GetText())
+func (r *hocon) ExitString_data(ctx *parser.String_dataContext) {
+	(*r.root.content)[ctx.Key().GetText()] = MakeStringValue(ctx.String_value().GetText())
+}
+
+func (r *hocon) ExitNumber_data(ctx *parser.Number_dataContext) {
+	(*r.root.content)[ctx.Key().GetText()] = MakeNumericValue(ctx.NUMBER().GetText())
 }
 
 func NewConfigObject(parent *ConfigObject) *ConfigObject {
@@ -98,13 +111,14 @@ func setObjectKey(path string, obj *ConfigObject) *ConfigObject {
 	return obj
 }
 
-func ParseHocon(stream antlr.CharStream) (err error, h *Hocon) {
-	h = new(Hocon)
+func ParseHocon(stream antlr.CharStream) (err error, o *ConfigObject) {
+	h := new(hocon)
 	h.updater = noop
 	h.root = NewConfigObject(nil)
 	ts := parser.NewHOCONLexer(stream)
 	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
 	p.AddParseListener(h)
 	p.Hocon()
-	return err, h
+	o = h.root
+	return err, o
 }

@@ -10,24 +10,27 @@ import (
 func TestReferenceListener(t *testing.T) {
 	is, _ := antlr.NewFileStream("test/reference.conf")
 	_, res := ParseHocon(is)
-	dumpConfig(1, res.root)
+	dumpConfig(1, res)
 }
 
 func TestSimpleListener(t *testing.T) {
 	is, _ := antlr.NewFileStream("test/simple1.conf")
 	_, res := ParseHocon(is)
-	dumpConfig(1, res.root)
+	dumpConfig(1, res)
 }
 
 func dumpConfig(level int, conf *ConfigObject) {
-	prefix := strings.Repeat("+", level)
+	prefix := strings.Repeat("-", level)
 	for k, v := range *conf.content {
 		switch v.Type {
+		case NumericType:
+			fmt.Println(prefix, k, "=", v.RefValue.(int))
 		case StringType:
 			fmt.Println(prefix, k, "=", v.RefValue.(string))
 		case ObjectType:
-			fmt.Println(prefix, k)
+			fmt.Println(prefix, k, "{")
 			dumpConfig(level+1, v.RefValue.(*ConfigObject))
+			fmt.Println(prefix, "}")
 		}
 	}
 }
