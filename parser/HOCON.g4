@@ -64,6 +64,15 @@ fragment EXP
 
 //======================================================================================
 
+path
+   : PATHELEMENT ('.' PATHELEMENT)*
+   ;
+
+key
+   : path
+   | STRING
+   ;
+
 hocon
    : value*
    | property*
@@ -82,14 +91,6 @@ property
    | number_data
    ;
 
-object_data
-   : key KV? obj
-   ;
-
-array_data
-   : key KV array
-   ;
-
 rawstring
    : (PATHELEMENT|'-')+
    ;
@@ -97,6 +98,24 @@ rawstring
 string_value
    : STRING
    | rawstring
+   ;
+
+// object data
+
+object_begin
+   : '{'
+   ;
+
+object_end
+   : '}'
+   ;
+
+object_data
+   : key KV? obj
+   ;
+
+array_data
+   : key KV array
    ;
 
 string_data
@@ -111,27 +130,7 @@ number_data
    : key KV NUMBER
    ;
 
-path
-   : PATHELEMENT ('.' PATHELEMENT)*
-   ;
-
-key
-   : path
-   | STRING
-   ;
-
-array
-   : array_begin value (',' value)* array_end
-   | array_begin array_end
-   ;
-
-value
-   : STRING
-   | REFERENCE
-   | NUMBER
-   | obj
-   | array
-   ;
+// array data
 
 array_begin
    : '['
@@ -141,10 +140,16 @@ array_end
    : ']'
    ;
 
-object_begin
-   : '{'
+array
+   : array_begin value (','? value)* array_end
+   | array_begin array_end
    ;
 
-object_end
-   : '}'
+
+value
+   : STRING
+   | REFERENCE
+   | NUMBER
+   | obj
+   | array
    ;

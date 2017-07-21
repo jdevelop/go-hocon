@@ -10,7 +10,7 @@ import (
 type ValueType int
 
 const (
-	StringType ValueType = iota
+	StringType  ValueType = iota
 	NumericType
 	ObjectType
 	ArrayType
@@ -39,60 +39,93 @@ func MakeNumericValue(src string) *Value {
 type Content map[string]*Value
 
 type ConfigObject struct {
-	parent  *ConfigObject
 	content *Content
 }
 
-type updateKey func(string)
-
-func noop(string) {}
-
-type hocon struct {
-	*parser.BaseHOCONListener
-	root    *ConfigObject
-	updater updateKey
+type ConfigArray struct {
+	content []*Value
 }
 
-func (r *hocon) ExitObject_data(ctx *parser.Object_dataContext) {
-	r.root = r.root.parent
-	r.updater = noop
+type valueProvider interface {
+	setString(name string, value string)
+	setInt(name string, value string)
+	setObject(name string, value *ConfigObject)
 }
 
-func (r *hocon) EnterObject_data(ctx *parser.Object_dataContext) {
-	r.updater = func(path string) {
-		r.root = setObjectKey(path, r.root)
-		r.updater = noop
+func splitPath(path string) []string {
+	return strings.Split(path, ".")
+}
+
+func pathPrefix(path []string) ([]string, string) {
+	length := len(path)
+	if length == 1 {
+		return []string{}, (path)[0]
+	} else {
+		return path[:len(path)-1], (path)[length-1]
 	}
 }
 
-func (r *hocon) ExitKey(ctx *parser.KeyContext) {
-	r.updater(ctx.GetText())
+func (c *ConfigObject) setString(path string, value string) {
+	prefix, key := pathPrefix(splitPath(path))
+	resultKey := setObjectKey(prefix, c)
+	(*resultKey.content)[key] = MakeStringValue(value)
+}
+
+func (c *ConfigObject) setInt(path string, value string) {
+	prefix, key := pathPrefix(splitPath(path))
+	resultKey := setObjectKey(prefix, c)
+	(*resultKey.content)[key] = MakeNumericValue(value)
+}
+
+func (c *ConfigObject) setObject(path string, value *ConfigObject) {
+	prefix, key := pathPrefix(splitPath(path))
+	resultKey := setObjectKey(prefix, c)
+	(*resultKey.content)[key] = &Value{
+		Type:     ObjectType,
+		RefValue: value,
+	}
+}
+
+type hocon struct {
+	*parser.BaseHOCONListener
+	stack stack
+}
+
+func (r *hocon) ExitObject_data(ctx *parser.Object_dataContext) {
+	current, _ := r.stack.Pop()
+	parent, _ := r.stack.Peek()
+	parent.setObject(ctx.Key().GetText(), current.(*ConfigObject))
+}
+
+func (r *hocon) EnterObject_data(ctx *parser.Object_dataContext) {
+	r.stack.Push(NewConfigObject())
 }
 
 func (r *hocon) ExitString_data(ctx *parser.String_dataContext) {
 	sd := ctx.String_value().GetText()
 	if sd[0] == '"' || sd[0] == '\'' {
-		sd = sd[1 : len(sd)-1]
+		sd = sd[1: len(sd)-1]
 	}
-	(*r.root.content)[ctx.Key().GetText()] = MakeStringValue(sd)
+	if v, err := r.stack.Peek(); err == nil {
+		v.setString(ctx.Key().GetText(), sd)
+	}
 }
 
 func (r *hocon) ExitNumber_data(ctx *parser.Number_dataContext) {
-	(*r.root.content)[ctx.Key().GetText()] = MakeNumericValue(ctx.NUMBER().GetText())
+	if v, err := r.stack.Peek(); err == nil {
+		v.setInt(ctx.Key().GetText(), ctx.NUMBER().GetText())
+	}
 }
 
-func NewConfigObject(parent *ConfigObject) *ConfigObject {
+func NewConfigObject() *ConfigObject {
 	m := make(Content)
 	co := ConfigObject{
-		parent:  parent,
 		content: &m,
 	}
 	return &co
 }
 
-func setObjectKey(path string, obj *ConfigObject) *ConfigObject {
-	keys := strings.Split(path, ".")
-	oldRoot := obj
+func setObjectKey(keys []string, obj *ConfigObject) *ConfigObject {
 	for _, key := range keys {
 		if v, exists := (*obj.content)[key]; exists {
 			switch v.Type {
@@ -104,51 +137,50 @@ func setObjectKey(path string, obj *ConfigObject) *ConfigObject {
 			continue
 		}
 
-		newObject := NewConfigObject(obj)
+		newObject := NewConfigObject()
 		(*obj.content)[key] = &Value{
 			Type:     ObjectType,
 			RefValue: newObject,
 		}
 		obj = newObject
 	}
-	obj.parent = oldRoot
 	return obj
 }
 
-func ParseHocon(stream antlr.CharStream) (o *ConfigObject, err error) {
+func newHocon() *hocon {
 	h := new(hocon)
-	h.updater = noop
-	h.root = NewConfigObject(nil)
+	h.stack = *NewStack()
+	h.stack.Push(NewConfigObject())
+	return h
+}
+
+func ParseHocon(stream antlr.CharStream) (o *ConfigObject, err error) {
+	h := newHocon()
 	ts := parser.NewHOCONLexer(stream)
 	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
 	p.AddParseListener(h)
 	p.Hocon()
-	o = h.root
 	return o, err
 }
 
 func ParseHoconString(data string) (o *ConfigObject, err error) {
-	h := new(hocon)
-	h.updater = noop
-	h.root = NewConfigObject(nil)
+	h := newHocon()
 	ts := parser.NewHOCONLexer(antlr.NewInputStream(data))
 	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
 	p.AddParseListener(h)
 	p.Hocon()
-	o = h.root
 	return o, err
 }
 
 func ParseHoconFile(filename string) (o *ConfigObject, err error) {
-	h := new(hocon)
-	h.updater = noop
-	h.root = NewConfigObject(nil)
+	h := newHocon()
 	if fs, err := antlr.NewFileStream(filename); err == nil {
 		ts := parser.NewHOCONLexer(fs)
 		p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
 		p.AddParseListener(h)
 		p.Hocon()
-		o = h.root
+		res, _ := h.stack.Pop()
+		o = res.(*ConfigObject)
 	}
 	return o, err
 }
