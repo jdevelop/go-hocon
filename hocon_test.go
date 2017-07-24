@@ -22,6 +22,17 @@ func TestSimpleListener(t *testing.T) {
 	assert.Equal(t, "10s", obj.getString("init-timeout"))
 }
 
+func TestSimpleArrayListener(t *testing.T) {
+	res, _ := ParseHoconFile("test/simple2.conf")
+	dumpConfig(1, res)
+	arr := res.getArray("akka.persistence.view.arrays.array")
+	assert.Equal(t, "1", arr.getString(0))
+	assert.Equal(t, 100500, arr.getInt(4))
+	assert.Equal(t, 1, arr.getArray(5).getInt(0))
+	assert.Equal(t, 2, arr.getArray(5).getInt(1))
+	assert.Equal(t, 3, arr.getObject(3).getArray("test.passed").getInt(0))
+}
+
 func dumpConfig(level int, conf *ConfigObject) {
 	prefix := strings.Repeat("-", level)
 	for k, v := range *conf.content {
@@ -31,10 +42,9 @@ func dumpConfig(level int, conf *ConfigObject) {
 		case StringType:
 			fmt.Println(prefix, k, "=", v.RefValue.(string))
 		case ArrayType:
-			arr := v.RefValue.(*ConfigArray)
-			for i := 0; i < arr.idx; i++ {
-				fmt.Println(prefix, arr.content[i].RefValue)
-			}
+			fmt.Println(prefix, k, "= [")
+			dumpArray(level, v.RefValue.(*ConfigArray))
+			fmt.Println(prefix, "]")
 		case ObjectType:
 			fmt.Println(prefix, k, "{")
 			dumpConfig(level+1, v.RefValue.(*ConfigObject))
@@ -43,20 +53,41 @@ func dumpConfig(level int, conf *ConfigObject) {
 	}
 }
 
-func arr(path string) []string {
+func dumpArray(level int, arr *ConfigArray) {
+	prefix := strings.Repeat("-", level)
+	for i := 0; i < arr.idx; i++ {
+		v := arr.content[i]
+		switch v.Type {
+		case NumericType:
+			fmt.Println(prefix, v.RefValue.(int))
+		case StringType:
+			fmt.Println(prefix, v.RefValue.(string))
+		case ArrayType:
+			fmt.Println(prefix, "[")
+			dumpArray(level+1, v.RefValue.(*ConfigArray))
+			fmt.Println(prefix, "]")
+		case ObjectType:
+			fmt.Println(prefix, "{")
+			dumpConfig(level+1, v.RefValue.(*ConfigObject))
+			fmt.Println(prefix, "}")
+		}
+	}
+}
+
+func path(path string) []string {
 	return strings.Split(path, ".")
 }
 
 func TestKeyTreeBuild(t *testing.T) {
 	config := NewConfigObject()
 
-	setObjectKey(arr("test1"), config)
-	setObjectKey(arr("test2"), config)
-	setObjectKey(arr("test1.passed1"), config)
-	p3 := setObjectKey(arr("test2.passed2.passed3"), config)
-	setObjectKey(arr("nested1"), p3)
-	setObjectKey(arr("nested2"), p3)
-	setObjectKey(arr("nested3"), p3)
+	setObjectKey(path("test1"), config)
+	setObjectKey(path("test2"), config)
+	setObjectKey(path("test1.passed1"), config)
+	p3 := setObjectKey(path("test2.passed2.passed3"), config)
+	setObjectKey(path("nested1"), p3)
+	setObjectKey(path("nested2"), p3)
+	setObjectKey(path("nested3"), p3)
 
 	dumpConfig(1, config)
 

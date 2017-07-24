@@ -9,7 +9,8 @@ import (
 type ValueType int
 
 const (
-	StringType ValueType = iota
+	StringType    ValueType = iota
+	ReferenceType
 	NumericType
 	ObjectType
 	ArrayType
@@ -25,8 +26,9 @@ type hocon struct {
 	stack stack
 }
 
-type valueProvider interface {
+type valueSetter interface {
 	setString(name string, value string)
+	setReference(name string, value string)
 	setInt(name string, value string)
 	setObject(name string, value *ConfigObject)
 	setArray(name string, value *ConfigArray)
@@ -57,6 +59,13 @@ func MakeObjectValue(src *ConfigObject) *Value {
 func MakeArrayValue(src *ConfigArray) *Value {
 	return &Value{
 		Type:     ArrayType,
+		RefValue: src,
+	}
+}
+
+func MakeRererenceValue(src string) *Value {
+	return &Value{
+		Type:     ReferenceType,
 		RefValue: src,
 	}
 }

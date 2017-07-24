@@ -1,24 +1,13 @@
 package hocon
 
-import "strings"
+import (
+	"strings"
+)
 
 type Content map[string]*Value
 
 type ConfigObject struct {
 	content *Content
-}
-
-func splitPath(path string) []string {
-	return strings.Split(path, ".")
-}
-
-func pathPrefix(path []string) ([]string, string) {
-	length := len(path)
-	if length == 1 {
-		return []string{}, (path)[0]
-	} else {
-		return path[:len(path)-1], (path)[length-1]
-	}
 }
 
 func (c *ConfigObject) setString(path string, value string) {
@@ -49,6 +38,9 @@ func (c *ConfigObject) setArray(path string, value *ConfigArray) {
 		Type:     ArrayType,
 		RefValue: value,
 	}
+}
+
+func (c *ConfigObject) setReference(path string, value string) {
 }
 
 func NewConfigObject() *ConfigObject {
@@ -121,6 +113,15 @@ func (o *ConfigObject) getObject(path string) (res *ConfigObject) {
 	if obj, key := traversePath(o, path); obj != nil {
 		if v, ok := (*obj.content)[key]; ok {
 			res = v.RefValue.(*ConfigObject)
+		}
+	}
+	return res
+}
+
+func (o *ConfigObject) getArray(path string) (res *ConfigArray) {
+	if obj, key := traversePath(o, path); obj != nil {
+		if v, ok := (*obj.content)[key]; ok {
+			res = v.RefValue.(*ConfigArray)
 		}
 	}
 	return res

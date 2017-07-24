@@ -26,7 +26,7 @@ func (r *hocon) ExitArray_array(ctx *parser.Array_arrayContext) {
 
 func (r *hocon) ExitArray_string(ctx *parser.Array_stringContext) {
 	res, _ := r.stack.Peek()
-	res.setString("", ctx.GetText())
+	res.setString("", stripStringQuotas(ctx.GetText()))
 }
 
 func (r *hocon) ExitArray_number(ctx *parser.Array_numberContext) {

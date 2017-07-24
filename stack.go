@@ -6,21 +6,21 @@ import (
 
 type stack struct {
 	head    int
-	content []valueProvider
+	content []valueSetter
 }
 
 func NewStack() *stack {
 	return &stack{
 		head:    -1,
-		content: make([]valueProvider, 1),
+		content: make([]valueSetter, 1),
 	}
 }
 
-func (s *stack) Push(p valueProvider) {
+func (s *stack) Push(p valueSetter) {
 	s.head++
 	length := len(s.content)
 	if s.head >= length {
-		tmp := make([]valueProvider, length*2)
+		tmp := make([]valueSetter, length*2)
 		copy(tmp, s.content)
 		for i := 0; i < length; i++ {
 			s.content[i] = nil
@@ -30,7 +30,7 @@ func (s *stack) Push(p valueProvider) {
 	s.content[s.head] = p
 }
 
-func (s *stack) Pop() (v valueProvider, err error) {
+func (s *stack) Pop() (v valueSetter, err error) {
 	if s.head < 0 {
 		v = nil
 		err = errors.New("Pop on the empty stack")
@@ -42,7 +42,7 @@ func (s *stack) Pop() (v valueProvider, err error) {
 	return v, err
 }
 
-func (s *stack) Peek() (v valueProvider, err error) {
+func (s *stack) Peek() (v valueSetter, err error) {
 	if s.head < 0 {
 		v = nil
 		err = errors.New("Peek on the empty stack")

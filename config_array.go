@@ -21,6 +21,9 @@ func (c *ConfigArray) setArray(path string, value *ConfigArray) {
 	c.append(MakeArrayValue(value))
 }
 
+func (c *ConfigArray) setReference(path string, value string) {
+}
+
 func NewConfigArray() *ConfigArray {
 	co := ConfigArray{
 		idx:     0,
@@ -38,4 +41,20 @@ func (ca *ConfigArray) append(v *Value) {
 	}
 	ca.content[ca.idx] = v
 	ca.idx++
+}
+
+func (a *ConfigArray) getString(idx int) string {
+	return a.content[idx].RefValue.(string)
+}
+
+func (a *ConfigArray) getInt(idx int) int {
+	return a.content[idx].RefValue.(int)
+}
+
+func (a *ConfigArray) getObject(idx int) *ConfigObject {
+	return a.content[idx].RefValue.(*ConfigObject)
+}
+
+func (a *ConfigArray) getArray(idx int) *ConfigArray {
+	return a.content[idx].RefValue.(*ConfigArray)
 }

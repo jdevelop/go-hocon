@@ -15,12 +15,8 @@ func (r *hocon) EnterObject_data(ctx *parser.Object_dataContext) {
 }
 
 func (r *hocon) ExitString_data(ctx *parser.String_dataContext) {
-	sd := ctx.String_value().GetText()
-	if sd[0] == '"' || sd[0] == '\'' {
-		sd = sd[1 : len(sd)-1]
-	}
 	if v, err := r.stack.Peek(); err == nil {
-		v.setString(ctx.Key().GetText(), sd)
+		v.setString(ctx.Key().GetText(), stripStringQuotas(ctx.String_value().GetText()))
 	}
 }
 
