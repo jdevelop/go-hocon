@@ -30,6 +30,11 @@ func dumpConfig(level int, conf *ConfigObject) {
 			fmt.Println(prefix, k, "=", v.RefValue.(int))
 		case StringType:
 			fmt.Println(prefix, k, "=", v.RefValue.(string))
+		case ArrayType:
+			arr := v.RefValue.(*ConfigArray)
+			for i := 0; i < arr.idx; i++ {
+				fmt.Println(prefix, arr.content[i].RefValue)
+			}
 		case ObjectType:
 			fmt.Println(prefix, k, "{")
 			dumpConfig(level+1, v.RefValue.(*ConfigObject))

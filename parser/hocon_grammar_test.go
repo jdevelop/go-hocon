@@ -1,9 +1,9 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"testing"
-	"fmt"
 )
 
 type Err struct {

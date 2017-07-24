@@ -74,7 +74,8 @@ key
    ;
 
 hocon
-   : value*
+   : obj*
+   | array*
    | property*
    ;
 
@@ -141,15 +142,20 @@ array_end
    ;
 
 array
-   : array_begin value (','? value)* array_end
+   : array_begin array_value (','? array_value)* array_end
    | array_begin array_end
    ;
 
+array_string: STRING;
+array_reference: REFERENCE;
+array_number: NUMBER;
+array_obj: obj;
+array_array: array;
 
-value
-   : STRING
-   | REFERENCE
-   | NUMBER
-   | obj
-   | array
+array_value
+   : array_string
+   | array_reference
+   | array_number
+   | array_obj
+   | array_array
    ;
