@@ -15,12 +15,12 @@ import (
 func main() {
 	res, _ := hocon.ParseHoconFile("reference.conf")
 	
-	res.getString("akka.persistence.view.auto-update")
-	res.getString("akka.persistence.view.auto-update-replay-max")
-	res.getInt("akka.persistence.view.auto-update-replay-min")
+	res.GetString("akka.persistence.view.auto-update")
+	res.GetString("akka.persistence.view.auto-update-replay-max")
+	res.GetInt("akka.persistence.view.auto-update-replay-min")
 
-	obj := res.getObject("akka.persistence.snapshot-store.proxy")
-	obj.getString("init-timeout")
+	obj := res.GetObject("akka.persistence.snapshot-store.proxy")
+	obj.GetString("init-timeout")
 }
 
 ```
