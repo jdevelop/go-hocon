@@ -15,22 +15,22 @@ func TestReferenceListener(t *testing.T) {
 func TestSimpleListener(t *testing.T) {
 	res, _ := ParseHoconFile("test/simple1.conf")
 	dumpConfig(1, res)
-	assert.Equal(t, "on", res.getString("akka.persistence.view.auto-update"))
-	assert.Equal(t, "off", res.getString("akka.persistence.view.auto-update-replay-max"))
-	assert.Equal(t, -1, res.getInt("akka.persistence.view.auto-update-replay-min"))
-	obj := res.getObject("akka.persistence.snapshot-store.proxy")
-	assert.Equal(t, "10s", obj.getString("init-timeout"))
+	assert.Equal(t, "on", res.GetString("akka.persistence.view.auto-update"))
+	assert.Equal(t, "off", res.GetString("akka.persistence.view.auto-update-replay-max"))
+	assert.Equal(t, -1, res.GetInt("akka.persistence.view.auto-update-replay-min"))
+	obj := res.GetObject("akka.persistence.snapshot-store.proxy")
+	assert.Equal(t, "10s", obj.GetString("init-timeout"))
 }
 
 func TestSimpleArrayListener(t *testing.T) {
 	res, _ := ParseHoconFile("test/simple2.conf")
 	dumpConfig(1, res)
-	arr := res.getArray("akka.persistence.view.arrays.array")
-	assert.Equal(t, "1", arr.getString(0))
-	assert.Equal(t, 100500, arr.getInt(4))
-	assert.Equal(t, 1, arr.getArray(5).getInt(0))
-	assert.Equal(t, 2, arr.getArray(5).getInt(1))
-	assert.Equal(t, 3, arr.getObject(3).getArray("test.passed").getInt(0))
+	arr := res.GetArray("akka.persistence.view.arrays.array")
+	assert.Equal(t, "1", arr.GetString(0))
+	assert.Equal(t, 100500, arr.GetInt(4))
+	assert.Equal(t, 1, arr.GetArray(5).GetInt(0))
+	assert.Equal(t, 2, arr.GetArray(5).GetInt(1))
+	assert.Equal(t, 3, arr.GetObject(3).GetArray("test.passed").GetInt(0))
 }
 
 func dumpConfig(level int, conf *ConfigObject) {
@@ -91,7 +91,7 @@ func TestKeyTreeBuild(t *testing.T) {
 
 	dumpConfig(1, config)
 
-	assert.NotNil(t, config.getObject("test2.passed2").getObject("passed3"))
-	assert.Nil(t, config.getObject("test2.passed2").getObject("passed5"))
+	assert.NotNil(t, config.GetObject("test2.passed2").GetObject("passed3"))
+	assert.Nil(t, config.GetObject("test2.passed2").GetObject("passed5"))
 
 }

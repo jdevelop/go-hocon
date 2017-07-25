@@ -43,18 +43,22 @@ func (ca *ConfigArray) append(v *Value) {
 	ca.idx++
 }
 
-func (a *ConfigArray) getString(idx int) string {
+func (a *ConfigArray) GetString(idx int) string {
 	return a.content[idx].RefValue.(string)
 }
 
-func (a *ConfigArray) getInt(idx int) int {
+func (a *ConfigArray) GetInt(idx int) int {
 	return a.content[idx].RefValue.(int)
 }
 
-func (a *ConfigArray) getObject(idx int) *ConfigObject {
+func (a *ConfigArray) GetObject(idx int) *ConfigObject {
 	return a.content[idx].RefValue.(*ConfigObject)
 }
 
-func (a *ConfigArray) getArray(idx int) *ConfigArray {
+func (a *ConfigArray) GetArray(idx int) *ConfigArray {
 	return a.content[idx].RefValue.(*ConfigArray)
+}
+
+func (a *ConfigArray) GetSize() int {
+	return a.idx
 }

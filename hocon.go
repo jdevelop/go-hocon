@@ -77,22 +77,27 @@ func newHocon() *hocon {
 	return h
 }
 
+func commonParse(p *parser.HOCONParser, h *hocon) (o *ConfigObject, err error) {
+	p.AddParseListener(h)
+	p.Hocon()
+	res, _ := h.stack.Pop()
+	o = res.(*ConfigObject)
+	return o, err
+
+}
+
 func ParseHocon(stream antlr.CharStream) (o *ConfigObject, err error) {
 	h := newHocon()
 	ts := parser.NewHOCONLexer(stream)
 	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
-	p.AddParseListener(h)
-	p.Hocon()
-	return o, err
+	return commonParse(p, h)
 }
 
-func ParseHoconString(data string) (o *ConfigObject, err error) {
+func ParseHoconString(data *string) (o *ConfigObject, err error) {
 	h := newHocon()
-	ts := parser.NewHOCONLexer(antlr.NewInputStream(data))
+	ts := parser.NewHOCONLexer(antlr.NewInputStream(*data))
 	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
-	p.AddParseListener(h)
-	p.Hocon()
-	return o, err
+	return commonParse(p, h)
 }
 
 func ParseHoconFile(filename string) (o *ConfigObject, err error) {
@@ -100,10 +105,7 @@ func ParseHoconFile(filename string) (o *ConfigObject, err error) {
 	if fs, err := antlr.NewFileStream(filename); err == nil {
 		ts := parser.NewHOCONLexer(fs)
 		p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
-		p.AddParseListener(h)
-		p.Hocon()
-		res, _ := h.stack.Pop()
-		o = res.(*ConfigObject)
+		return commonParse(p, h)
 	}
 	return o, err
 }

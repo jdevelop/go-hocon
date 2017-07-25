@@ -91,7 +91,7 @@ func traversePath(o *ConfigObject, path string) (*ConfigObject, string) {
 	return obj, paths[len(paths)-1]
 }
 
-func (o *ConfigObject) getString(path string) (res string) {
+func (o *ConfigObject) GetString(path string) (res string) {
 	if obj, key := traversePath(o, path); obj != nil {
 		if v, ok := (*obj.content)[key]; ok {
 			res = v.RefValue.(string)
@@ -100,7 +100,7 @@ func (o *ConfigObject) getString(path string) (res string) {
 	return res
 }
 
-func (o *ConfigObject) getInt(path string) (res int) {
+func (o *ConfigObject) GetInt(path string) (res int) {
 	if obj, key := traversePath(o, path); obj != nil {
 		if v, ok := (*obj.content)[key]; ok {
 			res = v.RefValue.(int)
@@ -109,7 +109,7 @@ func (o *ConfigObject) getInt(path string) (res int) {
 	return res
 }
 
-func (o *ConfigObject) getObject(path string) (res *ConfigObject) {
+func (o *ConfigObject) GetObject(path string) (res *ConfigObject) {
 	if obj, key := traversePath(o, path); obj != nil {
 		if v, ok := (*obj.content)[key]; ok {
 			res = v.RefValue.(*ConfigObject)
@@ -118,11 +118,21 @@ func (o *ConfigObject) getObject(path string) (res *ConfigObject) {
 	return res
 }
 
-func (o *ConfigObject) getArray(path string) (res *ConfigArray) {
+func (o *ConfigObject) GetArray(path string) (res *ConfigArray) {
 	if obj, key := traversePath(o, path); obj != nil {
 		if v, ok := (*obj.content)[key]; ok {
 			res = v.RefValue.(*ConfigArray)
 		}
+	}
+	return res
+}
+
+func (o *ConfigObject) GetKeys() []string {
+	res := make([]string, len(*o.content))
+	i := 0
+	for k, _ := range *o.content {
+		res[i] = k
+		i++
 	}
 	return res
 }

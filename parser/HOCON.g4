@@ -6,7 +6,7 @@ grammar HOCON;
 
 
 COMMENT
-   : '#' ~( '\r' | '\n' )* -> skip
+   : ('#'|'//') ~( '\r' | '\n' )* -> skip
    ;
 
 NUMBER
@@ -19,7 +19,7 @@ STRING
    ;
 
 PATHELEMENT
-   : (ALPHANUM|'-')+
+   : (ALPHANUM|'-'|'_')+
    ;
 
 REFERENCE
@@ -97,7 +97,8 @@ rawstring
    ;
 
 string_value
-   : STRING
+   : REFERENCE STRING
+   | STRING
    | rawstring
    ;
 
