@@ -41,6 +41,13 @@ func TestReferencesListener(t *testing.T) {
 	dumpConfig(1, res)
 }
 
+func TestMerge(t *testing.T) {
+	res1, _ := ParseHoconFile("test/simple1.conf")
+	res2, _ := ParseHoconFile("test/simple2.conf")
+	res1.Merge(res2)
+	dumpConfig(1, res1)
+}
+
 func dumpConfig(level int, conf *ConfigObject) {
 	prefix := strings.Repeat("-", level)
 	for k, v := range *conf.content {

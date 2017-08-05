@@ -22,6 +22,11 @@ type Value struct {
 	RefValue interface{}
 }
 
+func (v *Value) cloneFrom(that *Value) {
+	v.RefValue = that.RefValue
+	v.Type = that.Type
+}
+
 type hocon struct {
 	*parser.BaseHOCONListener
 	stack       stack
@@ -108,7 +113,6 @@ func commonParse(p *parser.HOCONParser, h *hocon) (o *ConfigObject, err error) {
 	res, _ := h.stack.Pop()
 	o = res.(*ConfigObject)
 	return o, err
-
 }
 
 func ParseHocon(stream antlr.CharStream) (o *ConfigObject, err error) {
