@@ -26,11 +26,19 @@ func TestSimpleArrayListener(t *testing.T) {
 	res, _ := ParseHoconFile("test/simple2.conf")
 	dumpConfig(1, res)
 	arr := res.GetArray("akka.persistence.view.arrays.array")
-	assert.Equal(t, "1", arr.GetString(0))
-	assert.Equal(t, 100500, arr.GetInt(4))
-	assert.Equal(t, 1, arr.GetArray(5).GetInt(0))
-	assert.Equal(t, 2, arr.GetArray(5).GetInt(1))
-	assert.Equal(t, 3, arr.GetObject(3).GetArray("test.passed").GetInt(0))
+	assert.Equal(t, "11000", arr.GetString(0))
+	assert.Equal(t, 100500, arr.GetInt(5))
+	assert.Equal(t, 1, arr.GetArray(6).GetInt(0))
+	assert.Equal(t, 2, arr.GetArray(6).GetInt(1))
+	assert.Equal(t, 3, arr.GetObject(4).GetArray("test.passed").GetInt(0))
+}
+
+func TestReferencesListener(t *testing.T) {
+	res, _ := ParseHoconFile("test/references.conf")
+	assert.Equal(t, "11005002", res.GetString("test_string"))
+	assert.Equal(t, "100500", res.GetString("test"))
+	assert.Equal(t, "hello world", res.GetString("another.sentence"))
+	dumpConfig(1, res)
 }
 
 func dumpConfig(level int, conf *ConfigObject) {
@@ -48,6 +56,13 @@ func dumpConfig(level int, conf *ConfigObject) {
 		case ObjectType:
 			fmt.Println(prefix, k, "{")
 			dumpConfig(level+1, v.RefValue.(*ConfigObject))
+			fmt.Println(prefix, "}")
+		case CompoundStringType:
+			fmt.Print(prefix, k, "=")
+			for _, v := range v.RefValue.(*CompoundString).Value {
+				fmt.Print(v.RefValue, ",")
+			}
+			fmt.Println()
 			fmt.Println(prefix, "}")
 		}
 	}

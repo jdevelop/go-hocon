@@ -97,9 +97,9 @@ rawstring
    ;
 
 string_value
-   : REFERENCE STRING
-   | STRING
-   | rawstring
+   : STRING string_value*       #v_string
+   | rawstring string_value*    #v_rawstring
+   | REFERENCE string_value*    #v_reference
    ;
 
 // object data
@@ -147,7 +147,7 @@ array
    | array_begin array_end
    ;
 
-array_string: STRING;
+array_string: string_value;
 array_reference: REFERENCE;
 array_number: NUMBER;
 array_obj: obj;

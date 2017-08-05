@@ -11,7 +11,7 @@ deps: $(ANTLRJAR)
 	go get -u github.com/antlr/antlr4/runtime/Go/antlr/...
 	go get -u github.com/stretchr/testify/...
 
-gen:	deps
+gen:	parser/HOCON.g4
 	java -jar $(ANTLRJAR) -o . -listener -Dlanguage=Go parser/HOCON.g4
 
 gen-java:	java/parser/*.java

@@ -4,42 +4,55 @@ import (
 	"github.com/jdevelop/go-hocon/parser"
 )
 
-func (r *hocon) ExitArray_data(ctx *parser.Array_dataContext) {
-	current, _ := r.stack.Pop()
-	parent, _ := r.stack.Peek()
+func (hc *hocon) ExitArray_data(ctx *parser.Array_dataContext) {
+	current, _ := hc.stack.Pop()
+	parent, _ := hc.stack.Peek()
 	parent.setArray(ctx.Key().GetText(), current.(*ConfigArray))
 }
 
-func (r *hocon) EnterArray_data(ctx *parser.Array_dataContext) {
-	r.stack.Push(NewConfigArray())
+func (hc *hocon) EnterArray_data(ctx *parser.Array_dataContext) {
+	hc.stack.Push(NewConfigArray(hc))
 }
 
-func (r *hocon) EnterArray_array(ctx *parser.Array_arrayContext) {
-	r.stack.Push(NewConfigArray())
+func (hc *hocon) EnterArray_array(ctx *parser.Array_arrayContext) {
+	hc.stack.Push(NewConfigArray(hc))
 }
 
-func (r *hocon) ExitArray_array(ctx *parser.Array_arrayContext) {
-	obj, _ := r.stack.Pop()
-	p, _ := r.stack.Peek()
+func (hc *hocon) ExitArray_array(ctx *parser.Array_arrayContext) {
+	obj, _ := hc.stack.Pop()
+	p, _ := hc.stack.Peek()
 	p.setArray("", obj.(*ConfigArray))
 }
 
-func (r *hocon) ExitArray_string(ctx *parser.Array_stringContext) {
-	res, _ := r.stack.Peek()
-	res.setString("", stripStringQuotas(ctx.GetText()))
+func (hc *hocon) EnterArray_string(ctx *parser.Array_stringContext) {
+	hc.compoundRef = new(CompoundString)
+	hc.compoundRef.Value = make([]*Value, 0)
 }
 
-func (r *hocon) ExitArray_number(ctx *parser.Array_numberContext) {
-	res, _ := r.stack.Peek()
+func (hc *hocon) ExitArray_string(ctx *parser.Array_stringContext) {
+	if hc.compoundRef != nil {
+		if v, err := hc.stack.Peek(); err == nil {
+			v.setCompoundString("", hc.compoundRef)
+		}
+		hc.compoundRef = nil // cleanup
+	} else {
+		if v, err := hc.stack.Peek(); err == nil {
+			v.setString("", stripStringQuotas(ctx.String_value().GetText()))
+		}
+	}
+}
+
+func (hc *hocon) ExitArray_number(ctx *parser.Array_numberContext) {
+	res, _ := hc.stack.Peek()
 	res.setInt("", ctx.GetText())
 }
 
-func (r *hocon) EnterArray_obj(ctx *parser.Array_objContext) {
-	r.stack.Push(NewConfigObject())
+func (hc *hocon) EnterArray_obj(ctx *parser.Array_objContext) {
+	hc.stack.Push(NewConfigObject())
 }
 
-func (r *hocon) ExitArray_obj(ctx *parser.Array_objContext) {
-	obj, _ := r.stack.Pop()
-	p, _ := r.stack.Peek()
+func (hc *hocon) ExitArray_obj(ctx *parser.Array_objContext) {
+	obj, _ := hc.stack.Pop()
+	p, _ := hc.stack.Peek()
 	p.setObject("", obj.(*ConfigObject))
 }

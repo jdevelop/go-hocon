@@ -9,7 +9,8 @@ import (
 type ValueType int
 
 const (
-	StringType    ValueType = iota
+	StringType         ValueType = iota
+	CompoundStringType
 	ReferenceType
 	NumericType
 	ObjectType
@@ -23,15 +24,44 @@ type Value struct {
 
 type hocon struct {
 	*parser.BaseHOCONListener
-	stack stack
+	stack       stack
+	root        *ConfigObject
+	compoundRef *CompoundString
+}
+
+type CompoundString struct {
+	Value []*Value
+}
+
+func (cv *CompoundString) addString(src string) {
+	cv.Value = append(cv.Value, MakeStringValue(src))
+}
+
+func (cv *CompoundString) addReference(src string) {
+	cv.Value = append(cv.Value, MakeReferenceValue(src))
 }
 
 type valueSetter interface {
 	setString(name string, value string)
+	setCompoundString(name string, value *CompoundString)
 	setReference(name string, value string)
 	setInt(name string, value string)
 	setObject(name string, value *ConfigObject)
 	setArray(name string, value *ConfigArray)
+}
+
+func MakeReferenceValue(src string) *Value {
+	return &Value{
+		Type:     ReferenceType,
+		RefValue: src,
+	}
+}
+
+func MakeCompoundStringValue(src *CompoundString) *Value {
+	return &Value{
+		Type:     CompoundStringType,
+		RefValue: src,
+	}
 }
 
 func MakeStringValue(src string) *Value {
@@ -63,17 +93,12 @@ func MakeArrayValue(src *ConfigArray) *Value {
 	}
 }
 
-func MakeRererenceValue(src string) *Value {
-	return &Value{
-		Type:     ReferenceType,
-		RefValue: src,
-	}
-}
-
 func newHocon() *hocon {
 	h := new(hocon)
 	h.stack = *NewStack()
-	h.stack.Push(NewConfigObject())
+	co := NewConfigObject()
+	h.root = co
+	h.stack.Push(co)
 	return h
 }
 
