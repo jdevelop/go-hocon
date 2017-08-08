@@ -30,8 +30,16 @@ func (hc *hocon) ExitV_rawstring(context *parser.V_rawstringContext) {
 
 func (hc *hocon) ExitV_reference(context *parser.V_referenceContext) {
 	if hc.compoundRef != nil {
-		hc.compoundRef.Value = append(hc.compoundRef.Value,
-			MakeReferenceValue(stripStringQuotas(context.REFERENCE().GetText())))
+		path := stripStringQuotas(context.REFERENCE().GetText())
+		refPath := referencePath(path)
+		var value *Value
+		if v, ok := hc.refs[refPath]; ok {
+			value = v
+		} else {
+			value = MakeReferenceValue(path)
+			hc.refs[refPath] = value
+		}
+		hc.compoundRef.Value = append(hc.compoundRef.Value, value)
 	}
 }
 
@@ -42,8 +50,24 @@ func (hc *hocon) EnterString_data(ctx *parser.String_dataContext) {
 
 func (hc *hocon) ExitString_data(ctx *parser.String_dataContext) {
 	if hc.compoundRef != nil {
-		if v, err := hc.stack.Peek(); err == nil {
-			v.setCompoundString(ctx.Key().GetText(), hc.compoundRef)
+		refExists := false
+		for _, v := range hc.compoundRef.Value {
+			if v.Type == ReferenceType {
+				refExists = true
+			}
+		}
+		if refExists {
+			if v, err := hc.stack.Peek(); err == nil {
+				v.setCompoundString(ctx.Key().GetText(), hc.compoundRef)
+			}
+		} else {
+			str := ""
+			for _, v := range hc.compoundRef.Value {
+				str = v.RefValue.(string) + str
+			}
+			if v, err := hc.stack.Peek(); err == nil {
+				v.setString(ctx.Key().GetText(), str)
+			}
 		}
 		hc.compoundRef = nil // cleanup
 	} else {

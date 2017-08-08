@@ -25,8 +25,9 @@ func TestSimpleListener(t *testing.T) {
 func TestSimpleArrayListener(t *testing.T) {
 	res, _ := ParseHoconFile("test/simple2.conf")
 	dumpConfig(1, res)
+	res.ResolveReferences()
 	arr := res.GetArray("akka.persistence.view.arrays.array")
-	assert.Equal(t, "11000", arr.GetString(0))
+	assert.Equal(t, "ref-1000", arr.GetString(0))
 	assert.Equal(t, 100500, arr.GetInt(5))
 	assert.Equal(t, 1, arr.GetArray(6).GetInt(0))
 	assert.Equal(t, 2, arr.GetArray(6).GetInt(1))
@@ -35,6 +36,7 @@ func TestSimpleArrayListener(t *testing.T) {
 
 func TestReferencesListener(t *testing.T) {
 	res, _ := ParseHoconFile("test/references.conf")
+	res.ResolveReferences()
 	assert.Equal(t, "11005002", res.GetString("test_string"))
 	assert.Equal(t, "100500", res.GetString("test"))
 	assert.Equal(t, "hello world", res.GetString("another.sentence"))
@@ -45,11 +47,20 @@ func TestMerge(t *testing.T) {
 	res1, _ := ParseHoconFile("test/simple1.conf")
 	res2, _ := ParseHoconFile("test/simple2.conf")
 	res1.Merge(res2)
+	res1.ResolveReferences()
 	dumpConfig(1, res1)
 }
 
-func dumpConfig(level int, conf *ConfigObject) {
+func dumpConfig(level int, c ConfigInterface) {
 	prefix := strings.Repeat("-", level)
+	var conf *ConfigObject
+	switch c.(type) {
+	case *ConfigObject:
+		conf = c.(*ConfigObject)
+	case *hocon:
+		conf = c.(*hocon).root
+		fmt.Println(c.(*hocon).refs)
+	}
 	for k, v := range *conf.content {
 		switch v.Type {
 		case NumericType:

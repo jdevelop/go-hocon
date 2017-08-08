@@ -32,6 +32,18 @@ type hocon struct {
 	stack       stack
 	root        *ConfigObject
 	compoundRef *CompoundString
+	refs        map[string]*Value
+}
+
+type ConfigInterface interface {
+	GetValue(path string) *Value
+	GetString(path string) string
+	GetInt(path string) int
+	GetObject(path string) *ConfigObject
+	GetArray(path string) *ConfigArray
+	GetKeys() []string
+	Merge(ref ConfigInterface)
+	ResolveReferences()
 }
 
 type CompoundString struct {
@@ -103,33 +115,32 @@ func newHocon() *hocon {
 	h.stack = *NewStack()
 	co := NewConfigObject()
 	h.root = co
+	h.refs = make(map[string]*Value)
 	h.stack.Push(co)
 	return h
 }
 
-func commonParse(p *parser.HOCONParser, h *hocon) (o *ConfigObject, err error) {
+func commonParse(p *parser.HOCONParser, h *hocon) (ConfigInterface, error) {
 	p.AddParseListener(h)
 	p.Hocon()
-	res, _ := h.stack.Pop()
-	o = res.(*ConfigObject)
-	return o, err
+	return h, nil
 }
 
-func ParseHocon(stream antlr.CharStream) (o *ConfigObject, err error) {
+func ParseHocon(stream antlr.CharStream) (o ConfigInterface, err error) {
 	h := newHocon()
 	ts := parser.NewHOCONLexer(stream)
 	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
 	return commonParse(p, h)
 }
 
-func ParseHoconString(data *string) (o *ConfigObject, err error) {
+func ParseHoconString(data *string) (o ConfigInterface, err error) {
 	h := newHocon()
 	ts := parser.NewHOCONLexer(antlr.NewInputStream(*data))
 	p := parser.NewHOCONParser(antlr.NewCommonTokenStream(ts, 0))
 	return commonParse(p, h)
 }
 
-func ParseHoconFile(filename string) (o *ConfigObject, err error) {
+func ParseHoconFile(filename string) (o ConfigInterface, err error) {
 	h := newHocon()
 	if fs, err := antlr.NewFileStream(filename); err == nil {
 		ts := parser.NewHOCONLexer(fs)
@@ -137,4 +148,73 @@ func ParseHoconFile(filename string) (o *ConfigObject, err error) {
 		return commonParse(p, h)
 	}
 	return o, err
+}
+
+func (hc *hocon) GetValue(path string) *Value {
+	return hc.root.GetValue(path)
+}
+
+func (hc *hocon) GetString(path string) string {
+	return hc.root.GetString(path)
+}
+
+func (hc *hocon) GetInt(path string) int {
+	return hc.root.GetInt(path)
+}
+
+func (hc *hocon) GetObject(path string) *ConfigObject {
+	return hc.root.GetObject(path)
+}
+
+func (hc *hocon) GetArray(path string) *ConfigArray {
+	return hc.root.GetArray(path)
+}
+
+func (hc *hocon) GetKeys() []string {
+	return hc.root.GetKeys()
+}
+
+func (hc *hocon) Merge(ref ConfigInterface) {
+	hc.root.Merge(ref)
+	for k, v := range ref.(*hocon).refs {
+		hc.refs[k] = v
+	}
+}
+
+func (hc *hocon) ResolveReferences() {
+
+	for ; len(hc.refs) > 0; {
+		processed := false
+		for k, v := range hc.refs {
+			val := hc.GetValue(k)
+			cleanup := func() {
+				v.cloneFrom(val)
+				delete(hc.refs, k)
+				processed = true
+			}
+			if val == nil {
+				continue
+			}
+			switch val.Type {
+			case ReferenceType:
+				continue
+			case CompoundStringType:
+				hasRef := false
+				for _, v := range val.RefValue.(*CompoundString).Value {
+					if v.Type == ReferenceType {
+						hasRef = true
+						break
+					}
+				}
+				if !hasRef {
+					cleanup()
+				}
+			default:
+				cleanup()
+			}
+		}
+		if !processed {
+			break
+		}
+	}
 }

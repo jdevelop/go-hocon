@@ -2,7 +2,6 @@ package hocon
 
 import (
 	"strings"
-	"fmt"
 )
 
 type Content map[string]*Value
@@ -91,47 +90,9 @@ func traversePath(o *ConfigObject, path string) (*ConfigObject, string) {
 	return obj, paths[len(paths)-1]
 }
 
-func (co *ConfigObject) getValue(path string) (res *Value) {
-	if obj, key := traversePath(co, path); obj != nil {
-		if v, ok := (*obj.content)[key]; ok {
-			res = v
-		}
-	}
-	return res
-}
-
 func referencePath(path string) string {
 	if strings.HasPrefix(path, "${") {
 		return path[2:len(path)-1]
-	} else {
-		return path
-	}
-}
-
-func (co *ConfigObject) resolveStringReference(path string) string {
-	if v := co.getValue(path); v != nil {
-		switch v.Type {
-		case StringType:
-			return v.RefValue.(string)
-		case NumericType:
-			return fmt.Sprintf("%1d", v.RefValue.(int))
-		case CompoundStringType:
-			var result string = ""
-			cs := v.RefValue.(*CompoundString)
-			for _, data := range cs.Value {
-				switch data.Type {
-				case StringType:
-					result = data.RefValue.(string) + result
-				case ReferenceType:
-					result = co.resolveStringReference(referencePath(data.RefValue.(string))) + result
-				}
-			}
-			v.RefValue = result
-			v.Type = StringType
-			return result
-		default:
-			return path
-		}
 	} else {
 		return path
 	}
@@ -147,8 +108,31 @@ func NewConfigObject() *ConfigObject {
 	return &co
 }
 
+func (co *ConfigObject) GetValue(path string) (res *Value) {
+	if obj, key := traversePath(co, path); obj != nil {
+		if v, ok := (*obj.content)[key]; ok {
+			res = v
+		}
+	}
+	return res
+}
+
 func (co *ConfigObject) GetString(path string) (res string) {
-	res = co.resolveStringReference(path)
+	if obj, key := traversePath(co, path); obj != nil {
+		if v, ok := (*obj.content)[key]; ok {
+			switch v.Type {
+			case StringType:
+				fallthrough
+			case ReferenceType:
+				res = v.RefValue.(string)
+			case CompoundStringType:
+				res = ""
+				for _, v := range v.RefValue.(*CompoundString).Value {
+					res = v.RefValue.(string) + res
+				}
+			}
+		}
+	}
 	return res
 }
 
@@ -189,7 +173,14 @@ func (co *ConfigObject) GetKeys() []string {
 	return res
 }
 
-func (co *ConfigObject) Merge(right *ConfigObject) {
+func (co *ConfigObject) Merge(ref ConfigInterface) {
+	var right *ConfigObject
+	switch ref.(type) {
+	case *hocon:
+		right = ref.(*hocon).root
+	case *ConfigObject:
+		right = ref.(*ConfigObject)
+	}
 	for k, v := range *right.content {
 		if obj, ok := (*co.content)[k]; ok {
 			if obj.Type == v.Type {
@@ -214,4 +205,8 @@ func (co *ConfigObject) Merge(right *ConfigObject) {
 			(*co.content)[k] = v
 		}
 	}
+}
+
+func (co *ConfigObject) ResolveReferences() {
+
 }

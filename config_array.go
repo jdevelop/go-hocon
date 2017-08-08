@@ -1,5 +1,7 @@
 package hocon
 
+import "fmt"
+
 type ConfigArray struct {
 	hocon   *hocon
 	idx     int
@@ -58,9 +60,11 @@ func (a *ConfigArray) GetString(idx int) string {
 		for _, data := range cs.Value {
 			switch data.Type {
 			case StringType:
-				result = data.RefValue.(string) + result
+				fallthrough
 			case ReferenceType:
-				result = a.hocon.root.resolveStringReference(referencePath(data.RefValue.(string))) + result
+				result = data.RefValue.(string) + result
+			case NumericType:
+				result = fmt.Sprintf("%1d",data.RefValue.(int)) + result
 			}
 		}
 		ref.RefValue = result
