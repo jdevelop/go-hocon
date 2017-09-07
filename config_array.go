@@ -31,6 +31,9 @@ func (ca *ConfigArray) setArray(path string, value *ConfigArray) {
 func (ca *ConfigArray) setReference(path string, value string) {
 }
 
+func (ca *ConfigArray) setValue(path string, t ValueType, value interface{}) {
+}
+
 func NewConfigArray(hocon *hocon) *ConfigArray {
 	co := ConfigArray{
 		hocon:   hocon,
@@ -64,7 +67,7 @@ func (a *ConfigArray) GetString(idx int) string {
 			case ReferenceType:
 				result = data.RefValue.(string) + result
 			case NumericType:
-				result = fmt.Sprintf("%1d",data.RefValue.(int)) + result
+				result = fmt.Sprintf("%1d", data.RefValue.(int)) + result
 			}
 		}
 		ref.RefValue = result

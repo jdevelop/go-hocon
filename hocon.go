@@ -65,6 +65,7 @@ type valueSetter interface {
 	setInt(name string, value string)
 	setObject(name string, value *ConfigObject)
 	setArray(name string, value *ConfigArray)
+	setValue(path string, t ValueType, ref interface{})
 }
 
 func MakeReferenceValue(src string) *Value {

@@ -35,7 +35,11 @@ func (co *ConfigObject) setValue(path string, vType ValueType, ref interface{}) 
 }
 
 func (co *ConfigObject) setObject(path string, value *ConfigObject) {
-	co.setValue(path, ObjectType, value)
+	if obj := co.GetValue(path); obj != nil && obj.Type == ObjectType {
+		obj.RefValue.(*ConfigObject).Merge(value)
+	} else {
+		co.setValue(path, ObjectType, value)
+	}
 }
 
 func (co *ConfigObject) setArray(path string, value *ConfigArray) {
@@ -133,7 +137,7 @@ func (co *ConfigObject) GetString(path string) (res string) {
 			}
 		}
 	}
-	return res
+	return
 }
 
 func (co *ConfigObject) GetInt(path string) (res int) {
@@ -148,7 +152,12 @@ func (co *ConfigObject) GetInt(path string) (res int) {
 func (co *ConfigObject) GetObject(path string) (res *ConfigObject) {
 	if obj, key := traversePath(co, path); obj != nil {
 		if v, ok := (*obj.content)[key]; ok {
-			res = v.RefValue.(*ConfigObject)
+			switch v.Type {
+			case ObjectType:
+				res = v.RefValue.(*ConfigObject)
+			case CompoundStringType:
+				res = v.RefValue.(*CompoundString).Value[0].RefValue.(*ConfigObject)
+			}
 		}
 	}
 	return res
@@ -157,10 +166,15 @@ func (co *ConfigObject) GetObject(path string) (res *ConfigObject) {
 func (co *ConfigObject) GetArray(path string) (res *ConfigArray) {
 	if obj, key := traversePath(co, path); obj != nil {
 		if v, ok := (*obj.content)[key]; ok {
-			res = v.RefValue.(*ConfigArray)
+			switch v.Type {
+			case ArrayType:
+				res = v.RefValue.(*ConfigArray)
+			case CompoundStringType:
+				res = v.RefValue.(*CompoundString).Value[0].RefValue.(*ConfigArray)
+			}
 		}
 	}
-	return res
+	return
 }
 
 func (co *ConfigObject) GetKeys() []string {
